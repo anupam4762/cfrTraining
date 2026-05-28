@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Result</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+<div class="container mt-5">
+
+    <div class="card p-4 shadow">
+        <h2 class="text-center">🎯 Test Result</h2>
+
+        <h4 class="text-center mt-3">
+            Score: <%= score %> / <%= total %>
+        </h4>
+
+        <hr>
+
+        <% results.forEach((r, index) => { %>
+            <div class="mb-3 p-3 border rounded">
+
+                <b>Q<%= index + 1 %>. <%= r.question %></b><br>
+
+                <span>Your Answer: 
+                    <b class="<%= r.isCorrect ? 'text-success' : 'text-danger' %>">
+                        <%= r.selected %>
+                    </b>
+                </span><br>
+
+                <span>Correct Answer: 
+                    <b class="text-success"><%= r.correct %></b>
+                </span>
+
+            </div>
+        <% }) %>
+
+        <div class="text-center mt-3">
+            <button class="btn btn-primary" onclick="goDashboard()">Back to Dashboard</button>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+function goDashboard() {
+    localStorage.clear();
+    window.location.href = "/dashboard";
+}
+</script>
+
+</body>
+</html>

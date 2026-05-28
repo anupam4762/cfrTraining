@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DRET Test</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #eef2f7, #dfe9f3);
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(90deg, #4fa3b8, #5bbad5);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Layout */
+        .main {
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* Question Box */
+        .question-box {
+            flex: 3;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        }
+
+        /* Options */
+        .option {
+            display: block;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+        }
+
+        .option:hover {
+            background: #eef4ff;
+        }
+
+        .option input:checked + span {
+            color: #007bff;
+            font-weight: 600;
+        }
+
+        /* Controls */
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Palette */
+        .palette {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        }
+
+        .palette-grid {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .q-btn {
+            width: 25px;
+            height: 25px;
+            margin: 3px;
+            border-radius: 50%;
+            border: none;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .not-visited { background: #ccc; }
+        .not-answered { background: #dc3545; color:white; }
+        .answered { background: #28a745; color:white; }
+        .review {
+            background: #ffb300 !important;
+            color: white;
+        }
+        .answered-review {
+            background: #8e44ad !important;
+            color: white;
+        }
+        .current { border: 3px solid black; }
+
+        /* Summary */
+        .summary-box div {
+            display:flex;
+            justify-content:space-between;
+            padding:5px 0;
+        }
+
+        .dot {
+            width:12px;
+            height:12px;
+            display:inline-block;
+            border-radius:50%;
+            margin-right:5px;
+        }
+
+        .dot.green { background:#28a745; }
+        .dot.red { background:#dc3545; }
+        .dot.yellow { background:#ffc107; }
+        .dot.grey { background:#ccc; }
+        .dot.purple { background:#8e44ad; }
+
+        #timer {
+            font-weight: bold;
+            background: white;
+            color: #007bff;
+            padding: 5px 10px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- Header -->
+<div class="header">
+    <h4>CFR Training Portal</h4>
+
+    <div>
+        <span class="me-3">👤 <%= typeof user !== 'undefined' ? user.name : 'User' %></span>
+        <span id="timer" class="me-3"></span>
+
+        <button class="btn btn-light btn-sm"
+            onclick="window.location.href='/logout'">
+            Logout
+        </button>
+    </div>
+</div>
+
+<div class="main">
+
+<!-- Question Section -->
+<div class="question-box">
+
+<form id="testForm" method="POST" action="/submit-test">
+
+<% questions.forEach((q, index) => { %>
+<div class="question" id="question_<%= index %>" style="<%= index === 0 ? '' : 'display:none' %>">
+
+    <p><b>Q<%= index + 1 %>. <%= q.question %></b></p>
+
+    <label class="option">
+        <input type="radio" name="q_<%= q.id %>" value="A">
+        <span><%= q.option_a %></span>
+    </label>
+
+    <label class="option">
+        <input type="radio" name="q_<%= q.id %>" value="B">
+        <span><%= q.option_b %></span>
+    </label>
+
+    <label class="option">
+        <input type="radio" name="q_<%= q.id %>" value="C">
+        <span><%= q.option_c %></span>
+    </label>
+
+    <label class="option">
+        <input type="radio" name="q_<%= q.id %>" value="D">
+        <span><%= q.option_d %></span>
+    </label>
+
+</div>
+<% }) %>
+
+<div class="controls">
+    <button type="button" class="btn btn-outline-secondary" onclick="prevQuestion()">⬅ Previous</button>
+
+    <div>
+        <button type="button" class="btn btn-warning" onclick="markReview()">⚠ Review</button>
+        <button type="button" class="btn btn-primary" onclick="nextQuestion()">Next ➡</button>
+        <button type="button" class="btn btn-success" onclick="confirmSubmit()">Submit</button>
+    </div>
+</div>
+
+</form>
+
+</div>
+
+<!-- Palette -->
+<div class="palette">
+
+<h5>Test Summary</h5>
+
+<div class="summary-box">
+    <div><span>Total</span><b id="totalQ"></b></div>
+    <div><span>Answered</span><b id="answeredQ">0</b></div>
+    <div><span>Not Answered</span><b id="notAnsweredQ">0</b></div>
+    <div><span>Review</span><b id="reviewQ">0</b></div>
+    <div><span>Not Visited</span><b id="notVisitedQ">0</b></div>
+</div>
+
+<hr>
+
+<div class="palette-grid">
+<% questions.forEach((q, index) => { %>
+    <button class="q-btn not-visited" id="p_<%= index %>" onclick="goToQuestion(<%= index %>)">
+        <%= index + 1 %>
+    </button>
+<% }) %>
+</div>
+
+<hr>
+
+<div>
+    <div><span class="dot grey"></span> Not Visited</div>
+    <div><span class="dot red"></span> Not Answered</div>
+    <div><span class="dot green"></span> Answered</div>
+    <div><span class="dot yellow"></span> Review</div>
+    <div>
+        <span class="dot purple"></span>
+        Answered & Review
+    </div>
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+let current = 0;
+const total = <%= questions.length %>;
+let visited = {};
+let reviewMarked = {};
+
+document.getElementById("totalQ").innerText = total;
+
+// Timer
+let time = 30 * 60;
+function updateTimer() {
+    const min = Math.floor(time / 60);
+    const sec = time % 60;
+
+    document.getElementById("timer").innerText =
+        `${min}:${sec < 10 ? '0' : ''}${sec}`;
+
+    if (time <= 0) {
+        alert("Time up!");
+        document.getElementById("testForm").submit();
+    }
+
+    time--;
+}
+setInterval(updateTimer, 1000);
+
+// Navigation
+function showQuestion(index) {
+    document.querySelectorAll('.question').forEach(q => q.style.display = 'none');
+    document.getElementById("question_" + index).style.display = "block";
+
+    current = index;
+    visited[index] = true;
+    updatePalette();
+}
+
+function nextQuestion() {
+    if (current < total - 1) showQuestion(current + 1);
+}
+
+function prevQuestion() {
+    if (current > 0) showQuestion(current - 1);
+}
+
+function goToQuestion(index) {
+    showQuestion(index);
+}
+
+// Palette Update
+function updatePalette() {
+
+    let answered = 0;
+    let notAnswered = 0;
+    let review = 0;
+    let notVisited = 0;
+
+    for (let i = 0; i < total; i++) {
+
+        const btn =
+            document.getElementById("p_" + i);
+
+        // Reset classes
+        btn.className = "q-btn";
+
+        const selected =
+            document.querySelector(
+                `#question_${i} input:checked`
+            );
+
+        // NOT VISITED
+        if (!visited[i]) {
+
+            btn.classList.add("not-visited");
+            notVisited++;
+        }
+
+        // REVIEW
+        // REVIEW STATES
+        else if (reviewMarked[i] && selected) {
+
+            btn.classList.add("answered-review");
+            review++;
+        }
+
+        else if (reviewMarked[i]) {
+
+            btn.classList.add("review");
+            review++;
+        }
+
+        // ANSWERED
+        else if (selected) {
+
+            btn.classList.add("answered");
+            answered++;
+        }
+
+        // NOT ANSWERED
+        else {
+
+            btn.classList.add("not-answered");
+            notAnswered++;
+        }
+    }
+
+    // Current question highlight
+    document
+        .getElementById("p_" + current)
+        .classList.add("current");
+
+    // Update counts
+    document.getElementById("answeredQ").innerText =
+        answered;
+
+    document.getElementById("notAnsweredQ").innerText =
+        notAnswered;
+
+    document.getElementById("reviewQ").innerText =
+        review;
+
+    document.getElementById("notVisitedQ").innerText =
+        notVisited;
+}
+
+function markReview() {
+    reviewMarked[current] = true;
+    updatePalette();
+    // Auto move next
+    if (current < total - 1) {
+        showQuestion(current + 1);
+    }
+}
+
+// Submit
+function confirmSubmit() {
+    if (confirm("Submit test?")) {
+        document.getElementById("testForm").submit();
+    }
+}
+
+// Minimal anti-cheat (non-intrusive)
+document.addEventListener("visibilitychange", function () {
+    if (document.hidden) {
+        console.log("Tab switched");
+    }
+});
+
+showQuestion(0);
+
+// Remove review when answer selected
+document.querySelectorAll('input[type="radio"]').forEach(radio => {
+    radio.addEventListener('change', function () {
+        // Find current visible question
+        // reviewMarked[current] = false;
+        updatePalette();
+    });
+});
+
+</script>
+
+</body>
+</html>

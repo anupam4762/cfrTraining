@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DRET Test</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #eef2f7, #dfe9f3);
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(90deg, #4fa3b8, #5bbad5);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Layout */
+        .main {
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* Question Box */
+        .question-box {
+            flex: 3;
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .question-box p {
+            font-size: 18px;
+        }
+
+        /* Options */
+        .option {
+            display: block;
+            padding: 14px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .option:hover {
+            background: #eef4ff;
+        }
+
+        .option input:checked + span {
+            font-weight: 600;
+            color: #007bff;
+        }
+
+        /* Controls */
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Palette */
+        .palette {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 20px;
+        }
+
+        .q-btn {
+            width: 42px;
+            height: 42px;
+            margin: 6px;
+            border-radius: 50%;
+            border: none;
+        }
+
+        .not-visited { background: #ccc; }
+        .not-answered { background: #dc3545; }
+        .answered { background: #28a745; }
+        .review { background: #ffc107; }
+
+        .current {
+            border: 3px solid black;
+        }
+
+        #timer {
+            font-weight: bold;
+            background: white;
+            color: #007bff;
+            padding: 5px 10px;
+            border-radius: 6px;
+        }
+
+        #saveStatus {
+            font-size: 12px;
+            color: green;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="cheatWarning" style="
+    display:none;
+    position:fixed;
+    top:10px;
+    left:50%;
+    transform:translateX(-50%);
+    background:red;
+    color:white;
+    padding:10px 20px;
+    border-radius:6px;
+    z-index:1000;">
+    Tab switching detected!
+</div>
+
+
+<!-- Header -->
+<div class="header">
+    <h4>CFR Training Portal</h4>
+
+    <div>
+        <span class="me-3">👤 <%= user?.name || 'User' %></span>
+        <span id="timer" class="me-3"></span>
+
+        <button class="btn btn-light btn-sm"
+            onclick="window.location.href='/logout'">
+            Logout
+        </button>
+    </div>
+</div>
+
+<div class="main">
+
+<div class="question-box">
+
+<form id="testForm" method="POST" action="/submit-test">
+
+<% questions.forEach((q, index) => { %>
+    <div class="question" id="question_<%= index %>" 
+         style="display:<%= index === 0 ? 'block' : 'none' %>">
+
+        <p><b>Q<%= index + 1 %>. <%= q.question %></b></p>
+
+        <label class="option">
+            <input type="radio" name="q_<%= q.id %>" value="A">
+            <span><%= q.option_a %></span>
+        </label>
+
+        <label class="option">
+            <input type="radio" name="q_<%= q.id %>" value="B">
+            <span><%= q.option_b %></span>
+        </label>
+
+        <label class="option">
+            <input type="radio" name="q_<%= q.id %>" value="C">
+            <span><%= q.option_c %></span>
+        </label>
+
+        <label class="option">
+            <input type="radio" name="q_<%= q.id %>" value="D">
+            <span><%= q.option_d %></span>
+        </label>
+
+        <div id="saveStatus"></div>
+
+    </div>
+<% }) %>
+
+<div class="controls">
+    <button type="button" class="btn btn-outline-secondary" onclick="prevQuestion()">⬅ Previous</button>
+
+    <div>
+        <button type="button" class="btn btn-warning" onclick="markReview()">⚠ Review</button>
+        <button type="button" class="btn btn-primary" onclick="nextQuestion()">Next ➡</button>
+        <button type="button" class="btn btn-success" onclick="confirmSubmit()">Submit</button>
+    </div>
+</div>
+
+</form>
+
+</div>
+
+<!-- Palette -->
+<div class="palette">
+
+    <h5>Test Summary</h5>
+
+    <div class="mb-3">
+        <div>Total: <b id="totalQ"></b></div>
+        <div class="text-success">Answered: <b id="answeredQ">0</b></div>
+        <div class="text-danger">Not Answered: <b id="notAnsweredQ">0</b></div>
+        <div class="text-warning">Review: <b id="reviewQ">0</b></div>
+        <div class="text-secondary">Not Visited: <b id="notVisitedQ">0</b></div>
+    </div>
+
+    <hr>
+
+    <h6>Question Palette</h6>
+
+    <% questions.forEach((q, index) => { %>
+        <button type="button"
+            class="q-btn not-visited"
+            id="p_<%= index %>"
+            onclick="goToQuestion(<%= index %>)">
+            <%= index + 1 %>
+        </button>
+    <% }) %>
+
+</div>
+
+</div>
+
+<script>
+
+let visited = {};
+let current = 0;
+const total = <%= questions.length %>;
+
+// TIMER PERSISTENCE
+let time = localStorage.getItem("timeLeft") 
+    ? parseInt(localStorage.getItem("timeLeft")) 
+    : 30 * 60;
+
+window.onload = function() {
+    loadAnswers();
+    updateTracker();
+    showQuestion(0);
+    visited[0] = true;
+
+    document.documentElement.requestFullscreen().catch(() => {});
+    document.addEventListener("contextmenu", e => e.preventDefault());
+    document.getElementById("totalQ").innerText = total;
+
+    document.getElementById("testForm").addEventListener("submit", function () {
+        document.querySelectorAll(".hidden-answer").forEach(e => e.remove());
+
+        <% questions.forEach((q, index) => { %>
+            let val_<%= index %> = localStorage.getItem("q_<%= index %>");
+            if (val_<%= index %>) {
+                const input = document.createElement("input");
+                input.type = "hidden";
+                input.name = "q_<%= q.id %>";
+                input.value = val_<%= index %>;
+                input.classList.add("hidden-answer");
+                document.getElementById("testForm").appendChild(input);
+            }
+        <% }) %>
+    });
+};
+
+function showQuestion(index) {
+    document.querySelectorAll('.question').forEach(q => q.style.display = 'none');
+    document.getElementById("question_" + index).style.display = "block";
+
+    current = index;
+    visited[index] = true;
+    updatePalette();
+}
+
+function nextQuestion() {
+    saveAnswer();
+    if (current < total - 1) showQuestion(current + 1);
+}
+
+function prevQuestion() {
+    saveAnswer();
+    if (current > 0) showQuestion(current - 1);
+}
+
+function goToQuestion(index) {
+    saveAnswer();
+    showQuestion(index);
+}
+
+function saveAnswer() {
+    const selected = document.querySelector(`#question_${current} input:checked`);
+    if (selected) {
+        localStorage.setItem("q_" + current, selected.value);
+        document.getElementById("saveStatus").innerText = "✔ Answer saved";
+    }
+}
+
+function loadAnswers() {
+    for (let i = 0; i < total; i++) {
+        const val = localStorage.getItem("q_" + i);
+        if (val) {
+            const input = document.querySelector(`#question_${i} input[value="${val}"]`);
+            if (input) input.checked = true;
+        }
+    }
+}
+
+function updateTracker() {
+    let answered = 0;
+    let notAnswered = 0;
+    let review = 0;
+    let notVisited = 0;
+
+    for (let i = 0; i < total; i++) {
+        const btn = document.getElementById("p_" + i);
+        if (!btn) continue;
+
+        if (btn.classList.contains("review")) review++;
+        else if (btn.classList.contains("answered")) answered++;
+        else if (btn.classList.contains("not-answered")) notAnswered++;
+        else notVisited++;
+    }
+
+    document.getElementById("answeredQ").innerText = answered;
+    document.getElementById("notAnsweredQ").innerText = notAnswered;
+    document.getElementById("reviewQ").innerText = review;
+    document.getElementById("notVisitedQ").innerText = notVisited;
+}
+
+function markReview() {
+    const btn = document.getElementById("p_" + current);
+    if (!btn) return;
+
+    btn.classList.remove("answered", "not-answered");
+    btn.classList.add("review");
+    visited[current] = true;
+
+    updateTracker();
+}
+
+function updatePalette() {
+    for (let i = 0; i < total; i++) {
+        const btn = document.getElementById("p_" + i);
+        if (!btn) continue;
+
+        btn.classList.remove("answered", "not-answered", "review", "current", "not-visited");
+
+        const answer = localStorage.getItem("q_" + i);
+
+        if (!visited[i]) btn.classList.add("not-visited");
+        else if (answer) btn.classList.add("answered");
+        else btn.classList.add("not-answered");
+    }
+
+    document.getElementById("p_" + current).classList.add("current");
+    updateTracker();
+}
+
+function confirmSubmit() {
+    let unanswered = 0;
+
+    for (let i = 0; i < total; i++) {
+        if (!localStorage.getItem("q_" + i)) unanswered++;
+    }
+
+    let message = unanswered > 0
+        ? `You have ${unanswered} unanswered questions. Submit anyway?`
+        : "Submit test?";
+
+    if (confirm(message)) {
+        localStorage.clear();
+        document.getElementById("testForm").submit();
+    }
+}
+
+let tabSwitchCount = 0;
+const maxSwitchAllowed = 3;
+
+// Detect tab switch
+// document.addEventListener("visibilitychange", function () {
+
+//     if (document.hidden) {
+//         tabSwitchCount++;
+
+//         alert(`⚠ Warning!\n\nYou switched tabs.\nAttempt ${tabSwitchCount} of ${maxSwitchAllowed}`);
+
+//         // OPTIONAL: auto-submit after limit
+//         if (tabSwitchCount >= maxSwitchAllowed) {
+//             alert("❌ Too many tab switches. Test will be submitted.");
+
+//             localStorage.clear();
+//             document.getElementById("testForm").submit();
+//         }
+//     }
+// });
+
+// TIMER
+function updateTimer() {
+    const min = Math.floor(time / 60);
+    const sec = time % 60;
+
+    document.getElementById("timer").innerText =
+        `${min}:${sec < 10 ? '0' : ''}${sec}`;
+
+    localStorage.setItem("timeLeft", time);
+
+    if (time <= 0) {
+        alert("Time up!");
+        localStorage.clear();
+        document.getElementById("testForm").submit();
+    }
+
+    time--;
+}
+
+setInterval(updateTimer, 1000);
+
+document.addEventListener("keydown", function(e) {
+
+    // Block F12
+    if (e.key === "F12") e.preventDefault();
+
+    // Block Ctrl+Shift+I / Ctrl+Shift+J
+    if (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "J")) {
+        e.preventDefault();
+    }
+
+    // Block Ctrl+U
+    if (e.ctrlKey && e.key === "u") {
+        e.preventDefault();
+    }
+
+});
+
+const warning = document.getElementById("cheatWarning");
+
+// document.addEventListener("visibilitychange", function () {
+//     if (document.hidden) {
+//         tabSwitchCount++;
+
+//         warning.style.display = "block";
+
+//         setTimeout(() => {
+//             warning.style.display = "none";
+//         }, 2000);
+//     }
+// });
+
+// PREVENT REFRESH
+window.onbeforeunload = function () {
+    return "Your test progress will be lost!";
+};
+
+</script>
+
+</body>
+</html>
